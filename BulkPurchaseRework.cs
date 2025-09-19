@@ -2,7 +2,8 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-
+using System;
+using UnityEngine;
 
 namespace BulkPurchaseRework;
 
@@ -16,7 +17,7 @@ public class Plugin : BaseUnityPlugin
     // Configuraciones públicas accesibles desde otros scripts
     public static ConfigEntry<int> ShelveThreshold { get; set; }
     public static ConfigEntry<int> StorageThreshold { get; set; }
-    public static ConfigEntry<string> productBlacklist { get; set; }
+    public static ConfigEntry<string> ProductBlacklist { get; set; }
 
     private void Awake()
     {
@@ -38,14 +39,14 @@ public class Plugin : BaseUnityPlugin
             "Cantidad mínima de unidades en Bodega antes de reordenar."
         );
 
-        productBlacklist = Config.Bind(
+        ProductBlacklist = Config.Bind(
             "Blacklist",
             "Item Blacklist",
             "",
             "Lista de IDs de productos en lista negra para no comprar"
         );
 
-        Harmony = new Harmony("mod.supermarkettogether.bulkpurchaserework");
+        Harmony = new Harmony("com.MarsPatrick.bulkpurchaserework");
         Harmony.PatchAll();
     }
 }

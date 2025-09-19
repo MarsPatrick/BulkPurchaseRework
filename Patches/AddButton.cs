@@ -146,14 +146,19 @@ namespace BulkPurchaseRework.Patches
 
         private static void OnRemoveAllFromCartButtonClick()
         {
-            //unused
+            //Debug 
+            ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
+
+            GameObject gameObject = productListing.productPrefabs[0];
+            GameObject button = CreateButton(gameObject, "Test", 1, 1);
+            Debug.Log($"{gameObject}");
         }
 
         private static void OnNeedsOnlyButtonClick()
         {
             ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
             ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
-            List<int> productIdsList = string.IsNullOrEmpty(Plugin.productBlacklist.Value) ? new List<int>() : Plugin.productBlacklist.Value.Split(',').Select(str => int.Parse(str)).ToList();
+            List<int> productIdsList = string.IsNullOrEmpty(Plugin.ProductBlacklist.Value) ? new List<int>() : Plugin.ProductBlacklist.Value.Split(',').Select(str => int.Parse(str)).ToList();
 
             if (productListing == null || managerBlackboard == null) return;
 
@@ -170,7 +175,6 @@ namespace BulkPurchaseRework.Patches
                     {
                         int[] productExistences = managerBlackboard.GetProductsExistences(productID);
                         bool order = productExistences[0] < ShelveThreshold || productExistences[1] < StorageThreshold;
-                        Debug.Log($"bool {order}");
                         if (order)
                         {
                             float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
