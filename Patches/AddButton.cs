@@ -2,6 +2,9 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Collections.Generic;
+using System.Linq;
+
 
 namespace BulkPurchaseRework.Patches
 {
@@ -40,12 +43,6 @@ namespace BulkPurchaseRework.Patches
                 AddButtonEvents(newButton.GetComponent<Button>(), newButton.GetComponent<Image>(), OnNeedsOnlyButtonClick);
             }
 
-            if (buttonsBar.transform.Find("NeedStorageOnlyButton") == null)
-            {
-                GameObject storageOnlyButton = CreateButton(buttonsBar, "NeedStorageOnlyButton", -250, 55);
-                AddButtonEvents(storageOnlyButton.GetComponent<Button>(), storageOnlyButton.GetComponent<Image>(), OnNeedStorageOnlyButtonClick);
-            }
-
             return true;
         }
 
@@ -78,10 +75,7 @@ namespace BulkPurchaseRework.Patches
             textRectTransform.anchoredPosition = Vector2.zero;
 
             textComponent.text = name == "AddAllToCartButton" ? "Add All to Cart" :
-                                 name == "RemoveAllFromCartButton" ? "Remove All from Cart" :
-                                 name == "NeedsOnlyButton" ? "Needs Only Button" :
-                                 name == "NeedStorageOnlyButton" ? "Need Storage Only" :
-                     "Button";
+                                  name == "RemoveAllFromCartButton" ? "Remove All from Cart" : "Needs Only Button";
             textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.black;
@@ -152,92 +146,41 @@ namespace BulkPurchaseRework.Patches
 
         private static void OnRemoveAllFromCartButtonClick()
         {
-            ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
-
-            if (managerBlackboard == null) return;
-
-            int itemCount = managerBlackboard.shoppingListParent.transform.childCount;
-            for (int i = itemCount - 1; i >= 0; i--)
-            {
-                managerBlackboard.RemoveShoppingListProduct(i);
-            }
+            //unused
         }
 
         private static void OnNeedsOnlyButtonClick()
         {
             ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
             ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
+            List<int> productIdsList = string.IsNullOrEmpty(Plugin.productBlacklist.Value) ? new List<int>() : Plugin.productBlacklist.Value.Split(',').Select(str => int.Parse(str)).ToList();
 
             if (productListing == null || managerBlackboard == null) return;
 
             // Define your threshold for product existence
-            int threshold = Plugin.StorageThreshold.Value;
-
+            int ShelveThreshold = Plugin.ShelveThreshold.Value;
+            int StorageThreshold = Plugin.StorageThreshold.Value;
             foreach (var productPrefab in productListing.productPrefabs)
             {
                 var productComponent = productPrefab.GetComponent<Data_Product>();
                 if (productComponent != null && productListing.unlockedProductTiers[productComponent.productTier])
                 {
                     int productID = productComponent.productID;
-
-                    // Get the count of existing products
-                    int[] productExistences = managerBlackboard.GetProductsExistences(productID);
-
-                    int totalExistence = 0;
-                    foreach (int count in productExistences)
+                    if (!productIdsList.Contains(productID))
                     {
-                        totalExistence += count;
-                    }
-
-
-                    // Only order the product if the total existence meets the threshold
-                    if (totalExistence <= threshold)
-                    {
-                        //Debug.Log($"Ordering Product ID: {productID} - Total Existence: {totalExistence} is under the threshold.");
-
-                        float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
-                        boxPrice *= productListing.tierInflation[productComponent.productTier];
-                        float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
-                        managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                        int[] productExistences = managerBlackboard.GetProductsExistences(productID);
+                        bool order = productExistences[0] < ShelveThreshold || productExistences[1] < StorageThreshold;
+                        Debug.Log($"bool {order}");
+                        if (order)
+                        {
+                            float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
+                            boxPrice *= productListing.tierInflation[productComponent.productTier];
+                            float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
+                            managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                        }
                     }
                 }
             }
         }
-        private static void OnNeedStorageOnlyButtonClick()
-        {
-            ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
-            ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
-
-            if (productListing == null || managerBlackboard == null) return;
-
-            // Define your threshold for product existence
-            int threshold = Plugin.StorageBoxThreshold.Value;
-
-            foreach (var productPrefab in productListing.productPrefabs)
-            {
-                var productComponent = productPrefab.GetComponent<Data_Product>();
-                if (productComponent != null && productListing.unlockedProductTiers[productComponent.productTier])
-                {
-                    int productID = productComponent.productID;
-
-                    // Get the count of existing products
-                    int[] productExistences = managerBlackboard.GetProductsExistences(productID);
-                    int totalExistence = productExistences[1];
-
-                    // Only order the product if the total existence meets the threshold
-                    if (totalExistence <= threshold)
-                    {
-                        //Debug.Log($"Ordering Product ID: {productID} - Total Existence: {totalExistence} is under the threshold.");
-
-                        float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
-                        boxPrice *= productListing.tierInflation[productComponent.productTier];
-                        float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
-                        managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
-                    }
-                }
-            }
-        }
-
-
     }
 }
