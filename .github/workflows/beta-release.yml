@@ -1,0 +1,39 @@
+name: Beta Release Build
+
+on:
+  push:
+    tags:
+      - 'v*-beta*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '2.1.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build project
+        run: dotnet build --configuration Release
+
+      - name: Run tests
+        run: dotnet test --configuration Release
+
+      - name: Publish project
+        run: dotnet publish --configuration Release --output ./publish
+
+      - name: Create beta release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./publish/**/*  # Archivos generados de la carpeta publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
