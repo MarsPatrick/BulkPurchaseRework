@@ -3,7 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System;
-using UnityEngine;
+using System.Linq;
 
 namespace BulkPurchaseRework;
 
@@ -46,7 +46,30 @@ public class Plugin : BaseUnityPlugin
             "Lista de IDs de productos en lista negra para no comprar"
         );
 
+        NormalizeBlacklist();
         Harmony = new Harmony("com.MarsPatrick.bulkpurchaserework");
         Harmony.PatchAll();
+    }
+
+    private void NormalizeBlacklist()
+    {
+        if (string.IsNullOrWhiteSpace(ProductBlacklist.Value))
+        {
+            ProductBlacklist.Value = "";
+            return;
+        }
+
+        // Parsear a lista de enteros
+        var numbers = ProductBlacklist.Value
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.TryParse(s, out var n) ? n : (int?)null)
+            .Where(n => n.HasValue)
+            .Select(n => n.Value)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToList();
+
+        // Guardar de vuelta como string
+        ProductBlacklist.Value = string.Join(",", numbers);
     }
 }
