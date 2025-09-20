@@ -18,6 +18,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> ShelveThreshold { get; set; }
     public static ConfigEntry<int> StorageThreshold { get; set; }
     public static ConfigEntry<string> ProductBlacklist { get; set; }
+    public static ConfigEntry<int> CurrentMode { get; set; }
 
     private void Awake()
     {
@@ -44,6 +45,13 @@ public class Plugin : BaseUnityPlugin
             "Item Blacklist",
             "",
             "Lista de IDs de productos en lista negra para no comprar"
+        );
+
+        CurrentMode = Config.Bind(
+            "Modes",
+            "CurrentFillMode",
+            1,
+            "Modo de rellenar."
         );
 
         NormalizeBlacklist();

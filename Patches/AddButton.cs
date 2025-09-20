@@ -28,11 +28,11 @@ namespace BulkPurchaseRework.Patches
                 AddButtonEvents(addAllButton.GetComponent<Button>(), addAllButton.GetComponent<Image>(), OnAddAllToCartButtonClick);
             }
 
-            // Create the "Remove All from Cart" button if it doesn't exist
-            if (buttonsBar.transform.Find("RemoveAllFromCartButton") == null)
+            // Create the "Change Mode" button if it doesn't exist
+            if (buttonsBar.transform.Find("ChangeModeButton") == null)
             {
-                GameObject removeAllButton = CreateButton(buttonsBar, "RemoveAllFromCartButton", 425, 110); // Shifted 800 units to the right
-                AddButtonEvents(removeAllButton.GetComponent<Button>(), removeAllButton.GetComponent<Image>(), OnRemoveAllFromCartButtonClick);
+                GameObject ChangeModeButton = CreateButton(buttonsBar, "ChangeModeButton", 425, 110); // Shifted 800 units to the right
+                AddButtonEvents(ChangeModeButton.GetComponent<Button>(), ChangeModeButton.GetComponent<Image>(), OnChangeModeButtonClick);
             }
 
             // Create the new button if it doesn't exist
@@ -75,7 +75,7 @@ namespace BulkPurchaseRework.Patches
             textRectTransform.anchoredPosition = Vector2.zero;
 
             textComponent.text = name == "AddAllToCartButton" ? "Add All to Cart" :
-                                  name == "RemoveAllFromCartButton" ? "Remove All from Cart" : "Needs Only Button";
+                                  name == "ChangeModeButton" ? "Mode " + Plugin.CurrentMode.Value : "Needs Only Button";
             textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.black;
@@ -144,17 +144,60 @@ namespace BulkPurchaseRework.Patches
             }
         }
 
-        private static void OnRemoveAllFromCartButtonClick()
+        private static void OnChangeModeButtonClick()
         {
-            //Debug 
-            ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
+            Plugin.CurrentMode.Value = (Plugin.CurrentMode.Value % 7) + 1;
+            Button targetButton = GameObject.Find("ChangeModeButton")?.GetComponent<Button>();
+            if (targetButton != null)
+            {
+                // Aquí puedes acceder y modificar el botón encontrado
+                Text textComponent = targetButton.GetComponentInChildren<Text>();  // O TextMeshPro si usas esa
+                textComponent.text = "Mode " + Plugin.CurrentMode.Value;
+                Canvas canvas = targetButton.GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    // Forzar la actualización del Canvas
+                    Canvas.ForceUpdateCanvases();
 
-            GameObject gameObject = productListing.productPrefabs[0];
-            GameObject button = CreateButton(gameObject, "Test", 1, 1);
-            Debug.Log($"{gameObject}");
+                    // Aseguramos que el layout del botón se actualice
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(targetButton.GetComponent<RectTransform>());
+                }
+
+            }
         }
 
         private static void OnNeedsOnlyButtonClick()
+        {
+            Debug.Log($"Aca1");
+            switch (Plugin.CurrentMode.Value)
+            {
+                case 1:
+                    Debug.Log($"Acacase1");
+                    somelogic(1);
+                    break;
+                case 2:
+                    Debug.Log($"Acacase2");
+                    somelogic(2);
+                    break;
+                case 3:
+                    Debug.Log($"Acacase3");
+                    break;
+                case 4:
+                    Debug.Log($"Acacase4");
+                    break;
+                case 5:
+                    Debug.Log($"Acacase5");
+                    break;
+                case 6:
+                    Debug.Log($"Acacase6");
+                    break;
+                case 7:
+                    Debug.Log($"Acacase7");
+                    break;
+            }
+        }
+
+        private static void somelogic(int mode)
         {
             ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
             ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
@@ -162,20 +205,32 @@ namespace BulkPurchaseRework.Patches
 
             if (productListing == null || managerBlackboard == null) return;
 
-            // Define your threshold for product existence
-            int ShelveThreshold = Plugin.ShelveThreshold.Value;
-            int StorageThreshold = Plugin.StorageThreshold.Value;
+            int threshold = 0;
+            switch (mode)
+            {
+                case 1:
+                    threshold = Plugin.ShelveThreshold.Value;
+                    break;
+                case 2:
+                    threshold = Plugin.StorageThreshold.Value;
+                    break;
+                case 3:
+                    //threshold = Plugin.BoxThreshold.Value;
+                    break;
+            }
             foreach (var productPrefab in productListing.productPrefabs)
             {
+                // GameObject game = productPrefab;
+                // Vector3 size = game.GetComponent<BoxCollider>().size;
                 var productComponent = productPrefab.GetComponent<Data_Product>();
+                // Debug.Log($"Vector: {size}");
                 if (productComponent != null && productListing.unlockedProductTiers[productComponent.productTier])
                 {
                     int productID = productComponent.productID;
                     if (!productIdsList.Contains(productID))
                     {
                         int[] productExistences = managerBlackboard.GetProductsExistences(productID);
-                        bool order = productExistences[0] < ShelveThreshold || productExistences[1] < StorageThreshold;
-                        if (order)
+                        if (productExistences[mode-1] < threshold)
                         {
                             float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
                             boxPrice *= productListing.tierInflation[productComponent.productTier];
