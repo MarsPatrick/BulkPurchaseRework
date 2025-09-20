@@ -35,4 +35,4 @@ jobs:
         with:
           files: ./publish/BulkPurchaseRework.dll
         env:
-          GITHUB_TOKEN: ${{ secrets.AutomatedBuild }}
+          GITHUB_TOKEN: ${{ secrets.AutomatedBuild1 }}
