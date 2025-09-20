@@ -33,7 +33,6 @@ jobs:
       - name: Create beta release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            ./publish/**/*  # Archivos generados de la carpeta publish
+          files: ./publish/BulkPurchaseRework.dll
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AutomatedBuild }}
