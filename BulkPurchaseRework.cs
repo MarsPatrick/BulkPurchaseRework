@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace BulkPurchaseRework;
@@ -19,7 +20,8 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> StorageThreshold { get; set; }
     public static ConfigEntry<string> ProductBlacklist { get; set; }
     public static ConfigEntry<int> CurrentMode { get; set; }
-
+    public static int specialmode = 1;
+    public static Dictionary<(int, int), string> modeMappings = [];
     private void Awake()
     {
         Logger = base.Logger;
@@ -55,6 +57,7 @@ public class Plugin : BaseUnityPlugin
         );
 
         NormalizeBlacklist();
+        FillDictionary();
         Harmony = new Harmony("com.MarsPatrick.bulkpurchaserework");
         Harmony.PatchAll();
     }
@@ -69,7 +72,7 @@ public class Plugin : BaseUnityPlugin
 
         // Parsear a lista de enteros
         var numbers = ProductBlacklist.Value
-            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split([','], StringSplitOptions.RemoveEmptyEntries)
             .Select(s => int.TryParse(s, out var n) ? n : (int?)null)
             .Where(n => n.HasValue)
             .Select(n => n.Value)
@@ -78,5 +81,16 @@ public class Plugin : BaseUnityPlugin
             .ToList();
 
         ProductBlacklist.Value = string.Join(",", numbers);
+    }
+
+    private void FillDictionary()
+    {
+        modeMappings.Add((1, 1), "Shelf Threshold");
+        modeMappings.Add((1, 2), "Storage Threshold");
+        modeMappings.Add((1, 3), "Mixed Threshold");
+        modeMappings.Add((2, 1), "Fill Shelves w/o Storage");
+        modeMappings.Add((2, 2), "Fill Shelves w/ Storage");
+        modeMappings.Add((3, 1), "Boxes Storage");
+        modeMappings.Add((3, 2), "Item Threshold");
     }
 }

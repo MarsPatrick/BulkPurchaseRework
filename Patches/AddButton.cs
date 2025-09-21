@@ -31,8 +31,14 @@ namespace BulkPurchaseRework.Patches
             // Create the "Change Mode" button if it doesn't exist
             if (buttonsBar.transform.Find("ChangeModeButton") == null)
             {
-                GameObject ChangeModeButton = CreateButton(buttonsBar, "ChangeModeButton", 425, 110); // Shifted 800 units to the right
+                GameObject ChangeModeButton = CreateButton(buttonsBar, "ChangeModeButton", 445, 55); // Shifted 800 units to the right
                 AddButtonEvents(ChangeModeButton.GetComponent<Button>(), ChangeModeButton.GetComponent<Image>(), OnChangeModeButtonClick);
+            }
+
+            if (buttonsBar.transform.Find("ChangeBoolButton") == null)
+            {
+                GameObject ChangeBoolButton = CreateButton(buttonsBar, "ChangeBoolButton", 335, 110); // Shifted 800 units to the right
+                AddButtonEvents(ChangeBoolButton.GetComponent<Button>(), ChangeBoolButton.GetComponent<Image>(), OnChangeBoolButtonClick);
             }
 
             // Create the new button if it doesn't exist
@@ -49,7 +55,7 @@ namespace BulkPurchaseRework.Patches
         private static GameObject CreateButton(GameObject parent, string name, float xOffset, float width)
         {
             // Create the button GameObject
-            GameObject buttonObject = new GameObject(name);
+            GameObject buttonObject = new(name);
             RectTransform rectTransform = buttonObject.AddComponent<RectTransform>();
             Button buttonComponent = buttonObject.AddComponent<Button>();
             Image buttonImage = buttonObject.AddComponent<Image>();
@@ -65,7 +71,7 @@ namespace BulkPurchaseRework.Patches
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
             // Create and configure the text component
-            GameObject textObject = new GameObject("ButtonText");
+            GameObject textObject = new("ButtonText");
             textObject.transform.SetParent(buttonObject.transform, false);
 
             RectTransform textRectTransform = textObject.AddComponent<RectTransform>();
@@ -74,8 +80,11 @@ namespace BulkPurchaseRework.Patches
             textRectTransform.sizeDelta = rectTransform.sizeDelta;
             textRectTransform.anchoredPosition = Vector2.zero;
 
-            textComponent.text = name == "AddAllToCartButton" ? "Add All to Cart" :
-                                  name == "ChangeModeButton" ? "Mode " + Plugin.CurrentMode.Value : "Needs Only Button";
+            string buttontext = Plugin.modeMappings[(Plugin.CurrentMode.Value,1)];
+
+            textComponent.text  =   name == "AddAllToCartButton" ? "Add All to Cart" :
+                                    name == "ChangeModeButton" ? "Mode " + Plugin.CurrentMode.Value :
+                                    name == "ChangeBoolButton" ? buttontext : "Needs Only Button";
             textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             textComponent.alignment = TextAnchor.MiddleCenter;
             textComponent.color = Color.black;
@@ -89,7 +98,7 @@ namespace BulkPurchaseRework.Patches
             EventTrigger trigger = button.gameObject.AddComponent<EventTrigger>();
 
             // Hover enter event
-            EventTrigger.Entry pointerEnter = new EventTrigger.Entry
+            EventTrigger.Entry pointerEnter = new()
             {
                 eventID = EventTriggerType.PointerEnter
             };
@@ -97,7 +106,7 @@ namespace BulkPurchaseRework.Patches
             trigger.triggers.Add(pointerEnter);
 
             // Hover exit event
-            EventTrigger.Entry pointerExit = new EventTrigger.Entry
+            EventTrigger.Entry pointerExit = new()
             {
                 eventID = EventTriggerType.PointerExit
             };
@@ -146,20 +155,41 @@ namespace BulkPurchaseRework.Patches
 
         private static void OnChangeModeButtonClick()
         {
-            Plugin.CurrentMode.Value = (Plugin.CurrentMode.Value % 7) + 1;
-            Button targetButton = GameObject.Find("ChangeModeButton")?.GetComponent<Button>();
+            Plugin.CurrentMode.Value = (Plugin.CurrentMode.Value % 3) + 1;
+            Plugin.specialmode = 1;
+            ChangeButtonText("ChangeBoolButton",Plugin.modeMappings[(Plugin.CurrentMode.Value,1)]);
+            ChangeButtonText("ChangeModeButton","Mode " + Plugin.CurrentMode.Value);
+        }
+
+        private static void OnChangeBoolButtonClick()
+        {
+            switch (Plugin.CurrentMode.Value)
+            {
+                case 1:
+                    Plugin.specialmode = (Plugin.specialmode % 3) + 1;
+                    break;
+                case 2:
+                    Plugin.specialmode = (Plugin.specialmode % 2) + 1;
+                    break;
+                case 3:
+                    Plugin.specialmode = (Plugin.specialmode % 2) + 1;
+                    break;
+            }
+            ChangeButtonText("ChangeBoolButton",Plugin.modeMappings[(Plugin.CurrentMode.Value,Plugin.specialmode)]);
+        }
+
+        private static void ChangeButtonText(string button, string text)
+        {
+            Button targetButton = GameObject.Find(button)?.GetComponent<Button>();
+            
             if (targetButton != null)
             {
-                // Aquí puedes acceder y modificar el botón encontrado
-                Text textComponent = targetButton.GetComponentInChildren<Text>();  // O TextMeshPro si usas esa
-                textComponent.text = "Mode " + Plugin.CurrentMode.Value;
+                Text textComponent = targetButton.GetComponentInChildren<Text>();
+                textComponent.text = text;
                 Canvas canvas = targetButton.GetComponentInParent<Canvas>();
                 if (canvas != null)
                 {
-                    // Forzar la actualización del Canvas
                     Canvas.ForceUpdateCanvases();
-
-                    // Aseguramos que el layout del botón se actualice
                     LayoutRebuilder.ForceRebuildLayoutImmediate(targetButton.GetComponent<RectTransform>());
                 }
 
@@ -168,57 +198,26 @@ namespace BulkPurchaseRework.Patches
 
         private static void OnNeedsOnlyButtonClick()
         {
-            Debug.Log($"Aca1");
             switch (Plugin.CurrentMode.Value)
             {
                 case 1:
-                    Debug.Log($"Acacase1");
-                    Somelogic(1);
+                    Somelogic();
                     break;
                 case 2:
-                    Debug.Log($"Acacase2");
-                    Somelogic(2);
-                    break;
-                case 3:
-                    Debug.Log($"Acacase3");
                     Anotherlogic();
                     break;
-                case 4:
-                    Debug.Log($"Acacase4");
-                    break;
-                case 5:
-                    Debug.Log($"Acacase5");
-                    break;
-                case 6:
-                    Debug.Log($"Acacase6");
-                    break;
-                case 7:
-                    Debug.Log($"Acacase7");
+                case 3:
                     break;
             }
         }
 
-        private static void Somelogic(int mode)
+        private static void Somelogic()
         {
             ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
             ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
-            List<int> productIdsList = string.IsNullOrEmpty(Plugin.ProductBlacklist.Value) ? new List<int>() : Plugin.ProductBlacklist.Value.Split(',').Select(str => int.Parse(str)).ToList();
-
+            List<int> productIdsList = string.IsNullOrEmpty(Plugin.ProductBlacklist.Value) ? [] : Plugin.ProductBlacklist.Value.Split(',').Select(str => int.Parse(str)).ToList();
             if (productListing == null || managerBlackboard == null) return;
-
-            int threshold = 0;
-            switch (mode)
-            {
-                case 1:
-                    threshold = Plugin.ShelfThreshold.Value;
-                    break;
-                case 2:
-                    threshold = Plugin.StorageThreshold.Value;
-                    break;
-                case 3:
-                    //threshold = Plugin.BoxThreshold.Value;
-                    break;
-            }
+          
             foreach (var productPrefab in productListing.productPrefabs)
             {
                 var productComponent = productPrefab.GetComponent<Data_Product>();
@@ -228,7 +227,20 @@ namespace BulkPurchaseRework.Patches
                     if (!productIdsList.Contains(productID))
                     {
                         int[] productExistences = managerBlackboard.GetProductsExistences(productID);
-                        if (productExistences[mode - 1] < threshold)
+                        bool conditionMet = false;
+                        switch (Plugin.specialmode)
+                        {
+                            case 1:
+                                conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value;
+                                break;
+                            case 2:
+                                conditionMet = productExistences[1] < Plugin.StorageThreshold.Value;
+                                break;
+                            case 3:
+                                conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value || productExistences[1] < Plugin.StorageThreshold.Value;
+                                break;
+                        }
+                        if (conditionMet)
                         {
                             float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
                             boxPrice *= productListing.tierInflation[productComponent.productTier];
@@ -243,11 +255,8 @@ namespace BulkPurchaseRework.Patches
         private static void Anotherlogic()
         {
             Transform shelves = NPC_Manager.Instance.shelvesOBJ.transform;
-            if (shelves.childCount == 0)
-            {
-                return;
-            }
-            Dictionary<int, int> productQuantities = new Dictionary<int, int>();
+            if (shelves.childCount == 0) return;
+            Dictionary<int, int> productQuantities = [];
             for (int i = 0; i < shelves.childCount; i++)
             {
                 Data_Container shelfContainer = shelves.GetChild(i).GetComponent<Data_Container>();
@@ -275,7 +284,6 @@ namespace BulkPurchaseRework.Patches
                         }
                         if (productQuantity < space)
                         {
-                            Debug.Log($"Product ID: {productID}, Product Quantity: {productQuantity}, space: {space}");
                             if (productQuantities.ContainsKey(productID))
                             {
                                 productQuantities[productID] += (space - productQuantity);
@@ -302,12 +310,17 @@ namespace BulkPurchaseRework.Patches
                 float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
                 boxPrice *= productListing.tierInflation[productComponent.productTier];
                 float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
-                while (quantity > 0)
+                if (Plugin.specialmode == 2)
                 {
-                    int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
-                    managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
-                    quantity -= quantityToAdd;
+                    quantity -= managerBlackboard.GetProductsExistences(productID)[1];
+                    quantity -= managerBlackboard.GetProductsExistences(productID)[2];
                 }
+                while (quantity > 0)
+                    {
+                        int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
+                        managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                        quantity -= quantityToAdd;
+                    }
             }
         }
     }
