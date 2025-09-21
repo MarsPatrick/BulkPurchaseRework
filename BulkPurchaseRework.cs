@@ -15,7 +15,7 @@ public class Plugin : BaseUnityPlugin
     internal static Harmony Harmony;
 
     // Configuraciones públicas accesibles desde otros scripts
-    public static ConfigEntry<int> ShelveThreshold { get; set; }
+    public static ConfigEntry<int> ShelfThreshold { get; set; }
     public static ConfigEntry<int> StorageThreshold { get; set; }
     public static ConfigEntry<string> ProductBlacklist { get; set; }
     public static ConfigEntry<int> CurrentMode { get; set; }
@@ -26,9 +26,9 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo($"Plugin com.MarsPatrick.BulkPurchaseRework is loaded!");
 
         // Cargar configuraciones
-        ShelveThreshold = Config.Bind(
+        ShelfThreshold = Config.Bind(
             "Thresholds",
-            "ShelveThreshold",
+            "ShelfThreshold",
             40,
             "Cantidad mínima de unidades en Total antes de reordenar."
         );
@@ -77,7 +77,6 @@ public class Plugin : BaseUnityPlugin
             .OrderBy(n => n)
             .ToList();
 
-        // Guardar de vuelta como string
         ProductBlacklist.Value = string.Join(",", numbers);
     }
 }

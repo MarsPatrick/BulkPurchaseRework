@@ -173,14 +173,15 @@ namespace BulkPurchaseRework.Patches
             {
                 case 1:
                     Debug.Log($"Acacase1");
-                    somelogic(1);
+                    Somelogic(1);
                     break;
                 case 2:
                     Debug.Log($"Acacase2");
-                    somelogic(2);
+                    Somelogic(2);
                     break;
                 case 3:
                     Debug.Log($"Acacase3");
+                    Anotherlogic();
                     break;
                 case 4:
                     Debug.Log($"Acacase4");
@@ -197,7 +198,7 @@ namespace BulkPurchaseRework.Patches
             }
         }
 
-        private static void somelogic(int mode)
+        private static void Somelogic(int mode)
         {
             ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
             ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
@@ -209,7 +210,7 @@ namespace BulkPurchaseRework.Patches
             switch (mode)
             {
                 case 1:
-                    threshold = Plugin.ShelveThreshold.Value;
+                    threshold = Plugin.ShelfThreshold.Value;
                     break;
                 case 2:
                     threshold = Plugin.StorageThreshold.Value;
@@ -220,17 +221,14 @@ namespace BulkPurchaseRework.Patches
             }
             foreach (var productPrefab in productListing.productPrefabs)
             {
-                // GameObject game = productPrefab;
-                // Vector3 size = game.GetComponent<BoxCollider>().size;
                 var productComponent = productPrefab.GetComponent<Data_Product>();
-                // Debug.Log($"Vector: {size}");
                 if (productComponent != null && productListing.unlockedProductTiers[productComponent.productTier])
                 {
                     int productID = productComponent.productID;
                     if (!productIdsList.Contains(productID))
                     {
                         int[] productExistences = managerBlackboard.GetProductsExistences(productID);
-                        if (productExistences[mode-1] < threshold)
+                        if (productExistences[mode - 1] < threshold)
                         {
                             float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
                             boxPrice *= productListing.tierInflation[productComponent.productTier];
@@ -238,6 +236,77 @@ namespace BulkPurchaseRework.Patches
                             managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
                         }
                     }
+                }
+            }
+        }
+
+        private static void Anotherlogic()
+        {
+            Transform shelves = NPC_Manager.Instance.shelvesOBJ.transform;
+            if (shelves.childCount == 0)
+            {
+                return;
+            }
+            Dictionary<int, int> productQuantities = new Dictionary<int, int>();
+            for (int i = 0; i < shelves.childCount; i++)
+            {
+                Data_Container shelfContainer = shelves.GetChild(i).GetComponent<Data_Container>();
+                int[] productInfoArray = shelfContainer.productInfoArray;
+                int num = productInfoArray.Length / 2;
+                for (int j = 0; j < num; j++)
+                {
+                    int productID = productInfoArray[j * 2];
+                    int productQuantity = productInfoArray[j * 2 + 1];
+                    if (productID >= 0)
+                    {
+                        GameObject shelfGameObject = shelfContainer.productlistComponent.productPrefabs[productID];
+                        Vector3 size = shelfGameObject.GetComponent<BoxCollider>().size;
+                        bool isStackable = shelfGameObject.GetComponent<Data_Product>().isStackable;
+                        int length = Mathf.FloorToInt(shelfContainer.shelfLength / (size.x * 1.1f));
+                        length = Mathf.Clamp(length, 1, 100);
+                        int width = Mathf.FloorToInt(shelfContainer.shelfWidth / (size.z * 1.1f));
+                        width = Mathf.Clamp(width, 1, 100);
+                        int space = length * width;
+                        if (isStackable)
+                        {
+                            int height = Mathf.FloorToInt(shelfContainer.shelfHeight / (size.y * 1.1f));
+                            height = Mathf.Clamp(height, 1, 100);
+                            space = length * width * height;
+                        }
+                        if (productQuantity < space)
+                        {
+                            Debug.Log($"Product ID: {productID}, Product Quantity: {productQuantity}, space: {space}");
+                            if (productQuantities.ContainsKey(productID))
+                            {
+                                productQuantities[productID] += (space - productQuantity);
+                            }
+                            else
+                            {
+                                productQuantities.Add(productID, (space - productQuantity));
+                            }
+                        }
+                    }
+                }
+            }
+
+            //aqui recorrer el diccionario
+            ProductListing productListing = GameObject.FindFirstObjectByType<ProductListing>();
+            ManagerBlackboard managerBlackboard = GameObject.FindFirstObjectByType<ManagerBlackboard>();
+            if (productListing == null || managerBlackboard == null || productQuantities.Count == 0) return;
+            foreach (var entry in productQuantities)
+            {
+                int productID = entry.Key;
+                int quantity = entry.Value;
+                var productComponent = productListing.productPrefabs[productID].GetComponent<Data_Product>();
+
+                float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
+                boxPrice *= productListing.tierInflation[productComponent.productTier];
+                float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
+                while (quantity > 0)
+                {
+                    int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
+                    managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                    quantity -= quantityToAdd;
                 }
             }
         }

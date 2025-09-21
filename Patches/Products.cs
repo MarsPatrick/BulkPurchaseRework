@@ -77,9 +77,11 @@ public static class BlackboardShopItemPatch
         Debug.Log($"Producto {productId} toggled. Nueva blacklist: {Plugin.ProductBlacklist.Value}");
     }
 
+    
     private static void UpdateButtonColor(Image iconImage, int productIndex)
     {
-        if (Plugin.ProductBlacklist.Value.Split(',').Contains(productIndex.ToString()))
+
+        if (Plugin.ProductBlacklist.Value.Split(',').Contains("" +productIndex))
             iconImage.color = Color.red;
         else
             iconImage.color = Color.green;
