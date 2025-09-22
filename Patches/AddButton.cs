@@ -38,7 +38,7 @@ namespace BulkPurchaseRework.Patches
             if (buttonsBar.transform.Find("ChangeBoolButton") == null)
             {
                 GameObject ChangeBoolButton = CreateButton(buttonsBar, "ChangeBoolButton", 335, 110); // Shifted 800 units to the right
-                AddButtonEvents(ChangeBoolButton.GetComponent<Button>(), ChangeBoolButton.GetComponent<Image>(), OnChangeBoolButtonClick);
+                AddButtonWithRightClickEvents(ChangeBoolButton.GetComponent<Button>(), ChangeBoolButton.GetComponent<Image>(), OnChangeBoolButtonClick);
             }
 
             // Create the new button if it doesn't exist
@@ -123,6 +123,64 @@ namespace BulkPurchaseRework.Patches
             });
         }
 
+        private static void AddButtonWithRightClickEvents(Button button, Image buttonImage, UnityEngine.Events.UnityAction onClickAction)
+        {
+            EventTrigger trigger = button.gameObject.AddComponent<EventTrigger>();
+
+            // Hover enter event
+            EventTrigger.Entry pointerEnter = new()
+            {
+                eventID = EventTriggerType.PointerEnter
+            };
+            pointerEnter.callback.AddListener((data) => OnHoverEnter(buttonImage));
+            trigger.triggers.Add(pointerEnter);
+
+            // Hover exit event
+            EventTrigger.Entry pointerExit = new()
+            {
+                eventID = EventTriggerType.PointerExit
+            };
+            pointerExit.callback.AddListener((data) => OnHoverExit(buttonImage));
+            trigger.triggers.Add(pointerExit);
+
+            // Click event (only triggers if hovered)
+            button.onClick.AddListener(() =>
+            {
+                if (buttonImage.color != Color.white)
+                {
+                    onClickAction.Invoke();
+                }
+            });
+
+            // Right-click event using PointerClick
+            EventTrigger.Entry rightClick = new()
+            {
+                eventID = EventTriggerType.PointerClick
+            };
+            rightClick.callback.AddListener((data) =>
+            {
+                PointerEventData pointerData = (PointerEventData)data;
+                if (pointerData.button == PointerEventData.InputButton.Right)
+                {
+                    // Decrementa `Plugin.specialmode` con un envolvimiento para que no se salga del rango 1-6
+                    switch (Plugin.CurrentMode.Value)
+                    {
+                        case 1:
+                            Plugin.specialmode = (Plugin.specialmode - 1 - 1 + 6) % 6 + 1;
+                            break;
+                        case 2:
+                            Plugin.specialmode = (Plugin.specialmode - 1 - 1 + 2) % 2 + 1;
+                            break;
+                        case 3:
+                            Plugin.specialmode = (Plugin.specialmode - 1 - 1 + 2) % 2 + 1;
+                            break;
+                    }
+                    ChangeButtonText("ChangeBoolButton", Plugin.modeMappings[(Plugin.CurrentMode.Value, Plugin.specialmode)]);
+                }
+            });
+            trigger.triggers.Add(rightClick);
+        }
+
         private static void OnHoverEnter(Image buttonImage)
         {
             buttonImage.color = new Color(5f / 255f, 133f / 255f, 208f / 255f); // Light blue hover color
@@ -166,7 +224,7 @@ namespace BulkPurchaseRework.Patches
             switch (Plugin.CurrentMode.Value)
             {
                 case 1:
-                    Plugin.specialmode = (Plugin.specialmode % 3) + 1;
+                    Plugin.specialmode = (Plugin.specialmode % 6) + 1;
                     break;
                 case 2:
                     Plugin.specialmode = (Plugin.specialmode % 2) + 1;
@@ -228,15 +286,33 @@ namespace BulkPurchaseRework.Patches
                     {
                         int[] productExistences = managerBlackboard.GetProductsExistences(productID);
                         bool conditionMet = false;
+                        int quantity = 1;
                         switch (Plugin.specialmode)
                         {
                             case 1:
+                                quantity = (Plugin.ShelfThreshold.Value - productExistences[0]);
                                 conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value;
                                 break;
                             case 2:
-                                conditionMet = productExistences[1] < Plugin.StorageThreshold.Value;
+                                conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value;
                                 break;
                             case 3:
+                                quantity = (Plugin.StorageThreshold.Value - productExistences[1]);
+                                conditionMet = productExistences[1] < Plugin.StorageThreshold.Value;
+                                break;
+                            case 4:
+                                conditionMet = productExistences[1] < Plugin.StorageThreshold.Value;
+                                break;
+                            case 5:
+                                conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value;
+                                quantity = Plugin.ShelfThreshold.Value - productExistences[0];
+                                if (!conditionMet)
+                                {
+                                    conditionMet = productExistences[1] < Plugin.StorageThreshold.Value;
+                                    quantity = Plugin.StorageThreshold.Value - productExistences[1];
+                                }
+                                break;
+                            case 6:
                                 conditionMet = productExistences[0] < Plugin.ShelfThreshold.Value || productExistences[1] < Plugin.StorageThreshold.Value;
                                 break;
                         }
@@ -245,7 +321,12 @@ namespace BulkPurchaseRework.Patches
                             float boxPrice = productComponent.basePricePerUnit * productComponent.maxItemsPerBox;
                             boxPrice *= productListing.tierInflation[productComponent.productTier];
                             float roundedBoxPrice = Mathf.Round(boxPrice * 100f) / 100f;
-                            managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                            while (quantity > 0)
+                            {
+                                int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
+                                managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                                quantity -= quantityToAdd;
+                            }
                         }
                     }
                 }
@@ -316,11 +397,11 @@ namespace BulkPurchaseRework.Patches
                     quantity -= managerBlackboard.GetProductsExistences(productID)[2];
                 }
                 while (quantity > 0)
-                    {
-                        int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
-                        managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
-                        quantity -= quantityToAdd;
-                    }
+                {
+                    int quantityToAdd = Mathf.Min(quantity, productComponent.maxItemsPerBox);
+                    managerBlackboard.AddShoppingListProduct(productID, roundedBoxPrice);
+                    quantity -= quantityToAdd;
+                }
             }
         }
     }

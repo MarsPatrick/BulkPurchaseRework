@@ -85,9 +85,12 @@ public class Plugin : BaseUnityPlugin
 
     private void FillDictionary()
     {
-        modeMappings.Add((1, 1), "Shelf Threshold");
-        modeMappings.Add((1, 2), "Storage Threshold");
-        modeMappings.Add((1, 3), "Mixed Threshold");
+        modeMappings.Add((1, 1), "Shelf Fill Threshold");
+        modeMappings.Add((1, 2), "Shelf 1Box Threshold");
+        modeMappings.Add((1, 3), "Storage Fill Threshold");
+        modeMappings.Add((1, 4), "Storage 1Box Threshold");
+        modeMappings.Add((1, 5), "Mixed Fill Threshold");
+        modeMappings.Add((1, 6), "Mixed 1Box Threshold");
         modeMappings.Add((2, 1), "Fill Shelves w/o Storage");
         modeMappings.Add((2, 2), "Fill Shelves w/ Storage");
         modeMappings.Add((3, 1), "Boxes Storage");
